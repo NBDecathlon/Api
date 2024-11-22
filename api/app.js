@@ -5,6 +5,8 @@ const Todo = require('./todo');
 const authcontroller = require('./controller/authcontroller');
 const authJwt = require('./middlewares/authJwt');
 const app = express();
+const rateLimiter = require('./middlewares/rateLimiter');
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 mongoose.connect('mongodb://localhost:27017/api-todos?retryWrites=true&w=majority')
@@ -42,7 +44,7 @@ app.get('/api/todos/:id', [authJwt.verifyToken,authJwt.isExist],async (req, res)
         const todoJson = JSON.stringify(todo);
         const hash = etag(todoJson);
         if (req.headers['if-none-match'] === hash) {
-          return res.status(304).send(); // Pas de modifications, renvoyer 304 Not Modified
+          return res.status(304).send();
         }
         res.setHeader('ETag', hash);
         res.status(200).json(todo);
@@ -61,7 +63,7 @@ app.put('/api/todos/:id',[authJwt.verifyToken,authJwt.isExist], async (req, res)
     console.log(clientETag);
     console.log(currentETag);
     if (clientETag !== currentETag) {
-        return res.status(412).send('Precondition Failed: ETag mismatch'); // 412 Precondition Failed
+        return res.status(412).send('Precondition Failed: ETag mismatch');
     }
     todo.title = req.body.title || todo.title;
     todo.completed = req.body.completed || todo.completed;
