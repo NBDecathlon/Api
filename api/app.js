@@ -75,4 +75,5 @@ app.get('/api/unsecured',(req,res)=>{
 })
 app.post("/api/auth/signup", authcontroller.signup);
 app.post("/api/auth/signin",authcontroller.signin);
+app.get("/api/oauth/redirect",authcontroller.oauth2Redirect)
 module.exports = app;
