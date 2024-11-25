@@ -1,41 +1,52 @@
-
 const express = require('express');
+const { isAdmin } = require('./middlewares/roleCheck');
+const authJwt = require('./middlewares/authJwt');
+const Todo = require('./models/todo');
 const router = express.Router();
-const { verifyToken, isAdmin, isUser } = require('./middlewares/authJwt');
 
-let todos = [
-    { id: 1, title: 'First todo', description: 'This is the first todo' },
-    { id: 2, title: 'Second todo', description: 'This is the second todo' },
-];
+router.use(authJwt);
 
-router.get('/', verifyToken, (req, res) => {
-    res.json(todos);
+router.get('/', async (req, res) => {
+    try {
+        const todos = await Todo.find();
+        res.status(200).send(todos);
+    } catch (error) {
+        res.status(500).send({ message: 'Error fetching todos' });
+    }
 });
 
-router.get('/:id', verifyToken, (req, res) => {
-    const todo = todos.find(t => t.id === parseInt(req.params.id));
-    if (!todo) return res.status(404).send({ message: 'Todo not found' });
-    res.json(todo);
+router.get('/:id', async (req, res) => {
+    try {
+        const todo = await Todo.findById(req.params.id);
+        if (!todo) {
+            return res.status(404).send({ message: 'Todo not found' });
+        }
+        res.status(200).send(todo);
+    } catch (error) {
+        res.status(500).send({ message: 'Error fetching todo' });
+    }
 });
 
-router.post('/', [verifyToken, isAdmin], (req, res) => {
-    const newTodo = {
-        id: todos.length + 1,
-        title: req.body.title,
-        description: req.body.description
-    };
-    todos.push(newTodo);
-    res.status(201).send(newTodo);
+router.post('/', isAdmin, async (req, res) => {
+    try {
+        const todo = new Todo(req.body);
+        await todo.save();
+        res.status(201).send(todo);
+    } catch (error) {
+        res.status(500).send({ message: 'Error creating todo' });
+    }
 });
 
-router.put('/:id', [verifyToken, isAdmin], (req, res) => {
-    const todo = todos.find(t => t.id === parseInt(req.params.id));
-    if (!todo) return res.status(404).send({ message: 'Todo not found' });
-
-    todo.title = req.body.title || todo.title;
-    todo.description = req.body.description || todo.description;
-
-    res.send(todo);
+router.put('/:id', isAdmin, async (req, res) => {
+    try {
+        const todo = await Todo.findByIdAndUpdate(req.params.id, req.body, { new: true });
+        if (!todo) {
+            return res.status(404).send({ message: 'Todo not found' });
+        }
+        res.status(200).send(todo);
+    } catch (error) {
+        res.status(500).send({ message: 'Error updating todo' });
+    }
 });
 
 module.exports = router;
